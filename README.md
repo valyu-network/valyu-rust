@@ -2,8 +2,8 @@
 
 [![Crates.io](https://img.shields.io/crates/v/valyu.svg)](https://crates.io/crates/valyu)
 [![Documentation](https://docs.rs/valyu/badge.svg)](https://docs.rs/valyu)
-[![License](https://img.shields.io/crates/l/valyu.svg)](https://github.com/valyunetwork/valyu-rust/blob/main/LICENSE)
-[![Alpha](https://img.shields.io/badge/status-alpha-orange.svg)](https://github.com/valyunetwork/valyu-rust)
+[![License](https://img.shields.io/crates/l/valyu.svg)](https://github.com/valyu-network/valyu-rust/blob/main/LICENSE)
+[![Alpha](https://img.shields.io/badge/status-alpha-orange.svg)](https://github.com/valyu-network/valyu-rust)
 
 Official Rust SDK for the [Valyu AI API](https://valyu.ai).
 
@@ -671,7 +671,7 @@ This crate requires Rust 1.70 or later.
 - **Documentation**: [docs.valyu.ai](https://docs.valyu.ai)
 - **API Reference**: Full parameter documentation above
 - **Examples**: Check the [examples/](./examples) directory in this repository
-- **Issues**: [Report bugs on GitHub](https://github.com/valyunetwork/valyu-rust/issues)
+- **Issues**: [Report bugs on GitHub](https://github.com/valyu-network/valyu-rust/issues)
 - **Platform**: [platform.valyu.ai](https://platform.valyu.ai)
 
 ## License
