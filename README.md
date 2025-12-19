@@ -598,6 +598,46 @@ println!("Processed {}/{} URLs",
 println!("Cost: ${:.4}", response.total_cost_dollars.unwrap_or(0.0));
 ```
 
+### DeepResearch (Async Research Tasks)
+
+```bash
+cargo run --example deepresearch
+```
+
+Perform comprehensive async research:
+
+```rust
+use valyu::{DeepResearchCreateRequest, DeepResearchMode};
+
+// Create a research task
+let request = DeepResearchCreateRequest::new("What are the key differences between RAG and fine-tuning?")
+    .with_mode(DeepResearchMode::Lite)
+    .with_output_formats(vec!["markdown".to_string()]);
+
+let task = client.deepresearch_create(&request).await?;
+println!("Task created: {:?}", task.deepresearch_id);
+
+// Wait for completion
+let result = client.deepresearch_wait(
+    task.deepresearch_id.as_ref().unwrap(),
+    5,   // Poll every 5 seconds
+    900, // Timeout after 15 minutes
+).await?;
+
+// Access results
+if let Some(output) = &result.output {
+    println!("Research output: {}", output);
+}
+
+if let Some(sources) = &result.sources {
+    println!("Used {} sources", sources.len());
+}
+
+if let Some(usage) = &result.usage {
+    println!("Total cost: ${:.4}", usage.total_cost);
+}
+```
+
 ### All Examples
 
 ```bash
@@ -615,6 +655,9 @@ cargo run --example answer
 
 # Structured answer output
 cargo run --example answer_structured
+
+# DeepResearch async research tasks
+cargo run --example deepresearch
 
 # Custom HTTP client configuration
 cargo run --example custom_client
