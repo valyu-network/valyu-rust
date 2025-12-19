@@ -953,6 +953,524 @@ pub struct AnswerCost {
     pub ai_dollars: Option<f64>,
 }
 
+// ========== DeepResearch API Types ==========
+
+/// Research mode for DeepResearch API
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "lowercase")]
+pub enum DeepResearchMode {
+    /// Fast mode - quick lookups, simple questions (1-2 min)
+    Fast,
+    /// Lite mode - moderate research depth (5-10 min)
+    Lite,
+    /// Heavy mode - comprehensive analysis (15-90 min)
+    Heavy,
+}
+
+impl Default for DeepResearchMode {
+    fn default() -> Self {
+        DeepResearchMode::Lite
+    }
+}
+
+/// Task status for DeepResearch
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "lowercase")]
+pub enum DeepResearchStatus {
+    /// Task is waiting to start
+    Queued,
+    /// Task is actively researching
+    Running,
+    /// Task completed successfully
+    Completed,
+    /// Task failed
+    Failed,
+    /// Task was cancelled
+    Cancelled,
+}
+
+/// File attachment for DeepResearch
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DeepResearchFileAttachment {
+    /// Data URL (base64 encoded, e.g., "data:application/pdf;base64,...")
+    pub data: String,
+    /// Original filename
+    pub filename: String,
+    /// MIME type (e.g., "application/pdf", "image/png")
+    #[serde(rename = "mediaType")]
+    pub media_type: String,
+    /// Optional context about this file
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub context: Option<String>,
+}
+
+/// MCP server configuration for DeepResearch
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DeepResearchMCPServerConfig {
+    /// MCP server URL
+    pub url: String,
+    /// Server name
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+    /// Custom tool prefix
+    #[serde(skip_serializing_if = "Option::is_none", rename = "toolPrefix")]
+    pub tool_prefix: Option<String>,
+    /// Authentication configuration
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub auth: Option<serde_json::Value>,
+    /// Allowed tools
+    #[serde(skip_serializing_if = "Option::is_none", rename = "allowedTools")]
+    pub allowed_tools: Option<Vec<String>>,
+}
+
+/// Search configuration for DeepResearch
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DeepResearchSearchConfig {
+    /// Type of search: "all", "web", or "proprietary"
+    #[serde(skip_serializing_if = "Option::is_none", rename = "searchType")]
+    pub search_type: Option<String>,
+    /// Sources to include in search
+    #[serde(skip_serializing_if = "Option::is_none", rename = "includedSources")]
+    pub included_sources: Option<Vec<String>>,
+}
+
+/// Request parameters for creating a DeepResearch task
+///
+/// # Example
+///
+/// ```
+/// use valyu::{DeepResearchCreateRequest, DeepResearchMode};
+///
+/// let request = DeepResearchCreateRequest::new("What are the key differences between RAG and fine-tuning?")
+///     .with_mode(DeepResearchMode::Lite)
+///     .with_output_formats(vec!["markdown".to_string()]);
+/// ```
+#[derive(Debug, Clone, Serialize)]
+pub struct DeepResearchCreateRequest {
+    /// Research query or task description (required)
+    pub input: String,
+
+    /// Research mode: "fast", "lite", or "heavy"
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub model: Option<DeepResearchMode>,
+
+    /// Output formats: ["markdown"], ["markdown", "pdf"], or JSON schema
+    #[serde(skip_serializing_if = "Option::is_none", rename = "outputFormats")]
+    pub output_formats: Option<Vec<serde_json::Value>>,
+
+    /// Natural language strategy instructions
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub strategy: Option<String>,
+
+    /// Search configuration
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub search: Option<DeepResearchSearchConfig>,
+
+    /// URLs to extract content from (max 10)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub urls: Option<Vec<String>>,
+
+    /// File attachments (max 10)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub files: Option<Vec<DeepResearchFileAttachment>>,
+
+    /// MCP server configurations (max 5)
+    #[serde(skip_serializing_if = "Option::is_none", rename = "mcpServers")]
+    pub mcp_servers: Option<Vec<DeepResearchMCPServerConfig>>,
+
+    /// Enable/disable code execution (default: true)
+    #[serde(skip_serializing_if = "Option::is_none", rename = "codeExecution")]
+    pub code_execution: Option<bool>,
+
+    /// Previous DeepResearch IDs to use as context (max 3)
+    #[serde(skip_serializing_if = "Option::is_none", rename = "previousReports")]
+    pub previous_reports: Option<Vec<String>>,
+
+    /// HTTPS URL for completion notification
+    #[serde(skip_serializing_if = "Option::is_none", rename = "webhookUrl")]
+    pub webhook_url: Option<String>,
+
+    /// Custom metadata
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub metadata: Option<serde_json::Value>,
+}
+
+impl DeepResearchCreateRequest {
+    /// Create a new DeepResearch request with a query
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use valyu::DeepResearchCreateRequest;
+    ///
+    /// let request = DeepResearchCreateRequest::new("Research market trends in AI");
+    /// ```
+    pub fn new(input: impl Into<String>) -> Self {
+        Self {
+            input: input.into(),
+            model: None,
+            output_formats: None,
+            strategy: None,
+            search: None,
+            urls: None,
+            files: None,
+            mcp_servers: None,
+            code_execution: None,
+            previous_reports: None,
+            webhook_url: None,
+            metadata: None,
+        }
+    }
+
+    /// Set the research mode
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use valyu::{DeepResearchCreateRequest, DeepResearchMode};
+    ///
+    /// let request = DeepResearchCreateRequest::new("AI research")
+    ///     .with_mode(DeepResearchMode::Heavy);
+    /// ```
+    pub fn with_mode(mut self, mode: DeepResearchMode) -> Self {
+        self.model = Some(mode);
+        self
+    }
+
+    /// Set output formats (e.g., ["markdown"], ["markdown", "pdf"])
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use valyu::DeepResearchCreateRequest;
+    ///
+    /// let request = DeepResearchCreateRequest::new("AI research")
+    ///     .with_output_formats(vec!["markdown".to_string(), "pdf".to_string()]);
+    /// ```
+    pub fn with_output_formats(mut self, formats: Vec<String>) -> Self {
+        self.output_formats = Some(formats.into_iter().map(serde_json::Value::String).collect());
+        self
+    }
+
+    /// Set a JSON schema for structured output
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use valyu::DeepResearchCreateRequest;
+    /// use serde_json::json;
+    ///
+    /// let schema = json!({
+    ///     "type": "object",
+    ///     "properties": {
+    ///         "summary": {"type": "string"},
+    ///         "key_points": {"type": "array", "items": {"type": "string"}}
+    ///     }
+    /// });
+    ///
+    /// let request = DeepResearchCreateRequest::new("AI research")
+    ///     .with_structured_output(schema);
+    /// ```
+    pub fn with_structured_output(mut self, schema: serde_json::Value) -> Self {
+        self.output_formats = Some(vec![schema]);
+        self
+    }
+
+    /// Set natural language strategy instructions
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use valyu::DeepResearchCreateRequest;
+    ///
+    /// let request = DeepResearchCreateRequest::new("AI research")
+    ///     .with_strategy("Focus on peer-reviewed sources and recent publications");
+    /// ```
+    pub fn with_strategy(mut self, strategy: impl Into<String>) -> Self {
+        self.strategy = Some(strategy.into());
+        self
+    }
+
+    /// Set search configuration
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use valyu::{DeepResearchCreateRequest, DeepResearchSearchConfig};
+    ///
+    /// let request = DeepResearchCreateRequest::new("AI research")
+    ///     .with_search(DeepResearchSearchConfig {
+    ///         search_type: Some("web".to_string()),
+    ///         included_sources: Some(vec!["arxiv.org".to_string()]),
+    ///     });
+    /// ```
+    pub fn with_search(mut self, search: DeepResearchSearchConfig) -> Self {
+        self.search = Some(search);
+        self
+    }
+
+    /// Set URLs to extract content from
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use valyu::DeepResearchCreateRequest;
+    ///
+    /// let request = DeepResearchCreateRequest::new("Compare these articles")
+    ///     .with_urls(vec!["https://example.com/article1".to_string()]);
+    /// ```
+    pub fn with_urls(mut self, urls: Vec<String>) -> Self {
+        self.urls = Some(urls);
+        self
+    }
+
+    /// Set file attachments
+    pub fn with_files(mut self, files: Vec<DeepResearchFileAttachment>) -> Self {
+        self.files = Some(files);
+        self
+    }
+
+    /// Set MCP server configurations
+    pub fn with_mcp_servers(mut self, servers: Vec<DeepResearchMCPServerConfig>) -> Self {
+        self.mcp_servers = Some(servers);
+        self
+    }
+
+    /// Enable or disable code execution
+    pub fn with_code_execution(mut self, enabled: bool) -> Self {
+        self.code_execution = Some(enabled);
+        self
+    }
+
+    /// Set previous report IDs for context
+    pub fn with_previous_reports(mut self, report_ids: Vec<String>) -> Self {
+        self.previous_reports = Some(report_ids);
+        self
+    }
+
+    /// Set webhook URL for completion notification
+    pub fn with_webhook_url(mut self, url: impl Into<String>) -> Self {
+        self.webhook_url = Some(url.into());
+        self
+    }
+
+    /// Set custom metadata
+    pub fn with_metadata(mut self, metadata: serde_json::Value) -> Self {
+        self.metadata = Some(metadata);
+        self
+    }
+}
+
+/// Response from creating a DeepResearch task
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct DeepResearchCreateResponse {
+    /// Whether the request was successful
+    pub success: bool,
+
+    /// Unique task identifier
+    pub deepresearch_id: Option<String>,
+
+    /// Current task status
+    pub status: Option<DeepResearchStatus>,
+
+    /// Research mode used
+    pub model: Option<DeepResearchMode>,
+
+    /// Task creation timestamp
+    pub created_at: Option<String>,
+
+    /// Custom metadata
+    pub metadata: Option<serde_json::Value>,
+
+    /// Whether the task is publicly accessible
+    pub public: Option<bool>,
+
+    /// Webhook secret for signature verification (only returned once)
+    pub webhook_secret: Option<String>,
+
+    /// Additional status message
+    pub message: Option<String>,
+
+    /// Error message if failed
+    pub error: Option<String>,
+}
+
+/// Progress information for a running task
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct DeepResearchProgress {
+    /// Current step number
+    pub current_step: i32,
+    /// Total number of steps
+    pub total_steps: i32,
+}
+
+/// Source information from research
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct DeepResearchSource {
+    /// Source title
+    pub title: String,
+    /// Source URL
+    pub url: String,
+    /// Content snippet
+    pub snippet: Option<String>,
+    /// Description
+    pub description: Option<String>,
+    /// Source type (web, pubmed, etc.)
+    pub source: Option<String>,
+    /// Organization ID
+    pub org_id: Option<String>,
+    /// Price/cost
+    pub price: Option<f64>,
+    /// Document ID
+    pub id: Option<String>,
+    /// DOI for academic papers
+    pub doi: Option<String>,
+    /// Document category
+    pub category: Option<String>,
+    /// Word count
+    pub word_count: Option<i32>,
+}
+
+/// Image metadata from research
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct DeepResearchImage {
+    /// Unique image identifier
+    pub image_id: String,
+    /// Image type: "chart" or "ai_generated"
+    pub image_type: String,
+    /// Associated DeepResearch ID
+    pub deepresearch_id: String,
+    /// Image title
+    pub title: String,
+    /// Image description
+    pub description: Option<String>,
+    /// Image URL
+    pub image_url: String,
+    /// S3 key
+    pub s3_key: String,
+    /// Creation timestamp
+    pub created_at: i64,
+    /// Chart type (if applicable)
+    pub chart_type: Option<String>,
+}
+
+/// Usage and cost breakdown
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct DeepResearchUsage {
+    /// Search cost in dollars
+    pub search_cost: f64,
+    /// Contents extraction cost in dollars
+    pub contents_cost: f64,
+    /// AI processing cost in dollars
+    pub ai_cost: f64,
+    /// Compute cost in dollars
+    pub compute_cost: f64,
+    /// Total cost in dollars
+    pub total_cost: f64,
+}
+
+/// Response from getting task status
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct DeepResearchStatusResponse {
+    /// Whether the request was successful
+    pub success: bool,
+
+    /// Unique task identifier
+    pub deepresearch_id: Option<String>,
+
+    /// Current task status
+    pub status: Option<DeepResearchStatus>,
+
+    /// Original research query
+    pub query: Option<String>,
+
+    /// Research mode used
+    pub mode: Option<DeepResearchMode>,
+
+    /// Requested output formats
+    pub output_formats: Option<Vec<serde_json::Value>>,
+
+    /// Task creation timestamp (Unix)
+    pub created_at: Option<i64>,
+
+    /// Whether the task is publicly accessible
+    pub public: Option<bool>,
+
+    /// Progress information (when running)
+    pub progress: Option<DeepResearchProgress>,
+
+    /// Conversation messages
+    pub messages: Option<Vec<serde_json::Value>>,
+
+    /// Completion timestamp (Unix)
+    pub completed_at: Option<i64>,
+
+    /// Research output (markdown string or JSON object)
+    pub output: Option<serde_json::Value>,
+
+    /// Output type: "markdown" or "json"
+    pub output_type: Option<String>,
+
+    /// PDF download URL (if requested)
+    pub pdf_url: Option<String>,
+
+    /// Generated images
+    pub images: Option<Vec<DeepResearchImage>>,
+
+    /// Sources used in research
+    pub sources: Option<Vec<DeepResearchSource>>,
+
+    /// Usage and cost breakdown
+    pub usage: Option<DeepResearchUsage>,
+
+    /// Error message if failed
+    pub error: Option<String>,
+}
+
+/// Response from listing tasks
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct DeepResearchListResponse {
+    /// Whether the request was successful
+    pub success: bool,
+
+    /// List of tasks
+    pub data: Option<Vec<DeepResearchTaskListItem>>,
+
+    /// Error message if failed
+    pub error: Option<String>,
+}
+
+/// Minimal task info for list view
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct DeepResearchTaskListItem {
+    /// Unique task identifier
+    pub deepresearch_id: String,
+    /// Research query
+    pub query: String,
+    /// Current status
+    pub status: DeepResearchStatus,
+    /// Creation timestamp (Unix)
+    pub created_at: i64,
+    /// Whether publicly accessible
+    pub public: Option<bool>,
+}
+
+/// Response from update/cancel/delete operations
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct DeepResearchOperationResponse {
+    /// Whether the request was successful
+    pub success: bool,
+
+    /// Status message
+    pub message: Option<String>,
+
+    /// Task identifier
+    pub deepresearch_id: Option<String>,
+
+    /// Error message if failed
+    pub error: Option<String>,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

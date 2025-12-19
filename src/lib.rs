@@ -111,6 +111,13 @@ pub use types::{
     // DeepSearch API
     DeepSearchRequest, DeepSearchResponse, ResultsBySource, SearchResult,
     // Contents API
-    AnswerCost, AnswerRequest, AnswerResponse, AnswerSearchMetadata, AnswerSearchResult, AiUsage,
     ContentResult, ContentsRequest, ContentsResponse, ResponseLength, SummaryOption,
+    // Answer API
+    AnswerCost, AnswerRequest, AnswerResponse, AnswerSearchMetadata, AnswerSearchResult, AiUsage,
+    // DeepResearch API
+    DeepResearchCreateRequest, DeepResearchCreateResponse, DeepResearchFileAttachment,
+    DeepResearchImage, DeepResearchListResponse, DeepResearchMCPServerConfig, DeepResearchMode,
+    DeepResearchOperationResponse, DeepResearchProgress, DeepResearchSearchConfig,
+    DeepResearchSource, DeepResearchStatus, DeepResearchStatusResponse, DeepResearchTaskListItem,
+    DeepResearchUsage,
 };

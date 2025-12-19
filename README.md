@@ -31,7 +31,7 @@ We do all the heavy lifting for you - **one unified API** for all data:
 - **Async/await**: Built on tokio and reqwest for efficient async operations
 - **Builder pattern**: Fluent interface for constructing complex search requests
 - **Comprehensive error handling**: Detailed error types for all failure scenarios
-- **Three powerful endpoints**: DeepSearch, Contents, and Answer APIs
+- **Four powerful endpoints**: DeepSearch, Contents, Answer, and DeepResearch APIs
 - **Well documented**: Extensive documentation with examples for all features
 - **Production ready**: Designed for reliability and ease of use in production environments
 
@@ -212,6 +212,13 @@ The main client for interacting with the Valyu API.
 - `contents(request: &ContentsRequest) -> Result<ContentsResponse>` - Extract content from URLs
 - `answer(request: &AnswerRequest) -> Result<AnswerResponse>` - Get AI-powered answers
 - `ask(query: impl Into<String>) -> Result<AnswerResponse>` - Simple answer with defaults
+- `deepresearch_create(request: &DeepResearchCreateRequest) -> Result<DeepResearchCreateResponse>` - Create async research task
+- `deepresearch_status(task_id) -> Result<DeepResearchStatusResponse>` - Get task status
+- `deepresearch_wait(task_id, poll_interval_secs, max_wait_secs) -> Result<DeepResearchStatusResponse>` - Wait for task completion
+- `deepresearch_list(api_key_id, limit) -> Result<DeepResearchListResponse>` - List tasks
+- `deepresearch_cancel(task_id) -> Result<DeepResearchOperationResponse>` - Cancel running task
+- `deepresearch_delete(task_id) -> Result<DeepResearchOperationResponse>` - Delete task
+- `research(query: impl Into<String>) -> Result<DeepResearchCreateResponse>` - Simple research with defaults
 
 ### DeepSearchRequest
 
@@ -320,6 +327,51 @@ Fields:
 - `search_metadata: Option<AnswerSearchMetadata>` - Search metadata
 - `ai_usage: Option<AiUsage>` - Token usage statistics
 - `cost: Option<AnswerCost>` - Cost breakdown (search + AI)
+
+### DeepResearchCreateRequest
+
+Builder for creating comprehensive async research tasks.
+
+#### Constructor
+
+- `new(input: impl Into<String>) -> Self` - Create a new research request
+
+#### Builder Methods
+
+- `with_mode(mode: DeepResearchMode) -> Self` - Set research mode: `Fast`, `Lite`, or `Heavy`
+- `with_output_formats(formats: Vec<String>) -> Self` - Set output formats: ["markdown"], ["markdown", "pdf"]
+- `with_structured_output(schema: serde_json::Value) -> Self` - Use JSON schema for structured output
+- `with_strategy(strategy: impl Into<String>) -> Self` - Set natural language research strategy
+- `with_search(config: DeepResearchSearchConfig) -> Self` - Set search configuration
+- `with_urls(urls: Vec<String>) -> Self` - Add URLs to extract content from (max 10)
+- `with_files(files: Vec<DeepResearchFileAttachment>) -> Self` - Add file attachments (max 10)
+- `with_mcp_servers(servers: Vec<DeepResearchMCPServerConfig>) -> Self` - Add MCP servers (max 5)
+- `with_code_execution(enabled: bool) -> Self` - Enable/disable code execution
+- `with_previous_reports(ids: Vec<String>) -> Self` - Use previous reports as context (max 3)
+- `with_webhook_url(url: impl Into<String>) -> Self` - Set webhook for completion notification
+- `with_metadata(metadata: serde_json::Value) -> Self` - Set custom metadata
+
+### DeepResearchMode
+
+Research mode options:
+- `Fast` - Quick lookups, simple questions (1-2 min, $0.15)
+- `Lite` - Moderate research depth (5-10 min, $0.50)
+- `Heavy` - Comprehensive analysis (15-90 min, $1.50)
+
+### DeepResearchStatusResponse
+
+Fields:
+- `success: bool` - Whether request succeeded
+- `deepresearch_id: Option<String>` - Task identifier
+- `status: Option<DeepResearchStatus>` - Current status: Queued, Running, Completed, Failed, Cancelled
+- `query: Option<String>` - Original query
+- `mode: Option<DeepResearchMode>` - Research mode used
+- `progress: Option<DeepResearchProgress>` - Current/total steps (when running)
+- `output: Option<serde_json::Value>` - Research output (when completed)
+- `pdf_url: Option<String>` - PDF download URL (if requested)
+- `images: Option<Vec<DeepResearchImage>>` - Generated images
+- `sources: Option<Vec<DeepResearchSource>>` - Sources used
+- `usage: Option<DeepResearchUsage>` - Cost breakdown
 
 ## Examples
 
@@ -546,6 +598,46 @@ println!("Processed {}/{} URLs",
 println!("Cost: ${:.4}", response.total_cost_dollars.unwrap_or(0.0));
 ```
 
+### DeepResearch (Async Research Tasks)
+
+```bash
+cargo run --example deepresearch
+```
+
+Perform comprehensive async research:
+
+```rust
+use valyu::{DeepResearchCreateRequest, DeepResearchMode};
+
+// Create a research task
+let request = DeepResearchCreateRequest::new("What are the key differences between RAG and fine-tuning?")
+    .with_mode(DeepResearchMode::Lite)
+    .with_output_formats(vec!["markdown".to_string()]);
+
+let task = client.deepresearch_create(&request).await?;
+println!("Task created: {:?}", task.deepresearch_id);
+
+// Wait for completion
+let result = client.deepresearch_wait(
+    task.deepresearch_id.as_ref().unwrap(),
+    5,   // Poll every 5 seconds
+    900, // Timeout after 15 minutes
+).await?;
+
+// Access results
+if let Some(output) = &result.output {
+    println!("Research output: {}", output);
+}
+
+if let Some(sources) = &result.sources {
+    println!("Used {} sources", sources.len());
+}
+
+if let Some(usage) = &result.usage {
+    println!("Total cost: ${:.4}", usage.total_cost);
+}
+```
+
 ### All Examples
 
 ```bash
@@ -563,6 +655,9 @@ cargo run --example answer
 
 # Structured answer output
 cargo run --example answer_structured
+
+# DeepResearch async research tasks
+cargo run --example deepresearch
 
 # Custom HTTP client configuration
 cargo run --example custom_client
