@@ -119,5 +119,5 @@ pub use types::{
     DeepResearchImage, DeepResearchListResponse, DeepResearchMCPServerConfig, DeepResearchMode,
     DeepResearchOperationResponse, DeepResearchProgress, DeepResearchSearchConfig,
     DeepResearchSource, DeepResearchStatus, DeepResearchStatusResponse, DeepResearchTaskListItem,
-    DeepResearchUsage,
+    DeepResearchUsage, Deliverable, DeliverableType, DeliverableStatus, DeliverableResult,
 };
