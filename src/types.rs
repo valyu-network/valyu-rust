@@ -961,7 +961,9 @@ pub struct AnswerCost {
 pub enum DeepResearchMode {
     /// Fast mode - quick lookups, simple questions (1-2 min)
     Fast,
-    /// Lite mode - moderate research depth (5-10 min)
+    /// Standard mode - moderate research depth (5-10 min)
+    Standard,
+    /// Lite mode - moderate research depth (5-10 min) [Deprecated: use Standard instead]
     Lite,
     /// Heavy mode - comprehensive analysis (15-90 min)
     Heavy,
@@ -969,7 +971,7 @@ pub enum DeepResearchMode {
 
 impl Default for DeepResearchMode {
     fn default() -> Self {
-        DeepResearchMode::Lite
+        DeepResearchMode::Standard
     }
 }
 
@@ -1127,7 +1129,7 @@ pub struct DeepResearchSearchConfig {
 /// use valyu::{DeepResearchCreateRequest, DeepResearchMode};
 ///
 /// let request = DeepResearchCreateRequest::new("What are the key differences between RAG and fine-tuning?")
-///     .with_mode(DeepResearchMode::Lite)
+///     .with_mode(DeepResearchMode::Standard)
 ///     .with_output_formats(vec!["markdown".to_string()]);
 /// ```
 #[derive(Debug, Clone, Serialize)]

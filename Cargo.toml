@@ -1,6 +1,6 @@
 [package]
 name = "valyu"
-version = "0.3.1"
+version = "0.3.2"
 edition = "2021"
 authors = ["Valyu AI <hirsh@valyu.ai>"]
 description = "Official Rust SDK for the Valyu AI API"

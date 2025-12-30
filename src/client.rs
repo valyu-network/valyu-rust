@@ -479,7 +479,7 @@ impl ValyuClient {
     ///     let client = ValyuClient::new("your-api-key");
     ///
     ///     let request = DeepResearchCreateRequest::new("What are the key differences between RAG and fine-tuning?")
-    ///         .with_mode(DeepResearchMode::Lite)
+    ///         .with_mode(DeepResearchMode::Standard)
     ///         .with_output_formats(vec!["markdown".to_string()]);
     ///
     ///     let response = client.deepresearch_create(&request).await?;
