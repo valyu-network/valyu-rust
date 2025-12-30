@@ -2,6 +2,11 @@
 
 use serde::{Deserialize, Serialize};
 
+// Helper function for serde default
+fn default_true() -> bool {
+    true
+}
+
 /// Request parameters for the Valyu DeepSearch API
 ///
 /// # Example
@@ -961,7 +966,9 @@ pub struct AnswerCost {
 pub enum DeepResearchMode {
     /// Fast mode - quick lookups, simple questions (1-2 min)
     Fast,
-    /// Lite mode - moderate research depth (5-10 min)
+    /// Standard mode - moderate research depth (5-10 min)
+    Standard,
+    /// Lite mode - moderate research depth (5-10 min) [Deprecated: use Standard instead]
     Lite,
     /// Heavy mode - comprehensive analysis (15-90 min)
     Heavy,
@@ -969,7 +976,7 @@ pub enum DeepResearchMode {
 
 impl Default for DeepResearchMode {
     fn default() -> Self {
-        DeepResearchMode::Lite
+        DeepResearchMode::Standard
     }
 }
 
@@ -1002,6 +1009,91 @@ pub struct DeepResearchFileAttachment {
     /// Optional context about this file
     #[serde(skip_serializing_if = "Option::is_none")]
     pub context: Option<String>,
+}
+
+/// Deliverable file type
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "lowercase")]
+pub enum DeliverableType {
+    /// CSV file
+    Csv,
+    /// Excel spreadsheet (XLSX)
+    Xlsx,
+    /// PowerPoint presentation (PPTX)
+    Pptx,
+    /// Word document (DOCX)
+    Docx,
+    /// PDF document
+    Pdf,
+}
+
+/// Deliverable configuration for DeepResearch
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Deliverable {
+    /// File type to generate
+    #[serde(rename = "type")]
+    pub deliverable_type: DeliverableType,
+    /// Description of what data to extract or content to generate (max 500 characters)
+    pub description: String,
+    /// Suggested column names (for CSV/XLSX only)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub columns: Option<Vec<String>>,
+    /// Include column headers (for CSV/XLSX, default: true)
+    #[serde(skip_serializing_if = "Option::is_none", rename = "includeHeaders")]
+    pub include_headers: Option<bool>,
+    /// Sheet name (for XLSX only)
+    #[serde(skip_serializing_if = "Option::is_none", rename = "sheetName")]
+    pub sheet_name: Option<String>,
+    /// Number of slides to generate (for PPTX only)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub slides: Option<i32>,
+    /// Template name to use
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub template: Option<String>,
+}
+
+/// Deliverable generation status
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "lowercase")]
+pub enum DeliverableStatus {
+    /// Successfully generated
+    Completed,
+    /// Generation failed
+    Failed,
+}
+
+/// Result of deliverable generation
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DeliverableResult {
+    /// Unique deliverable ID
+    pub id: String,
+    /// Original request description
+    pub request: String,
+    /// Deliverable file type
+    #[serde(rename = "type")]
+    pub deliverable_type: String,
+    /// Generation status
+    pub status: DeliverableStatus,
+    /// Generated filename/title
+    pub title: String,
+    /// Deliverable content description
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+    /// Token-signed authenticated URL to download the file
+    pub url: String,
+    /// S3 storage key
+    pub s3_key: String,
+    /// Number of rows (for CSV/XLSX)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub row_count: Option<i32>,
+    /// Number of columns (for CSV/XLSX)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub column_count: Option<i32>,
+    /// Error message if status is failed
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error: Option<String>,
+    /// Unix timestamp of creation
+    pub created_at: i64,
 }
 
 /// MCP server configuration for DeepResearch
@@ -1042,7 +1134,7 @@ pub struct DeepResearchSearchConfig {
 /// use valyu::{DeepResearchCreateRequest, DeepResearchMode};
 ///
 /// let request = DeepResearchCreateRequest::new("What are the key differences between RAG and fine-tuning?")
-///     .with_mode(DeepResearchMode::Lite)
+///     .with_mode(DeepResearchMode::Standard)
 ///     .with_output_formats(vec!["markdown".to_string()]);
 /// ```
 #[derive(Debug, Clone, Serialize)]
@@ -1073,6 +1165,11 @@ pub struct DeepResearchCreateRequest {
     /// File attachments (max 10)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub files: Option<Vec<DeepResearchFileAttachment>>,
+
+    /// Additional file outputs to generate (CSV, Excel, PowerPoint, Word, PDF). Max 10.
+    /// Can be simple strings or Deliverable objects with detailed configuration.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub deliverables: Option<Vec<serde_json::Value>>,
 
     /// MCP server configurations (max 5)
     #[serde(skip_serializing_if = "Option::is_none", rename = "mcpServers")]
@@ -1114,6 +1211,7 @@ impl DeepResearchCreateRequest {
             search: None,
             urls: None,
             files: None,
+            deliverables: None,
             mcp_servers: None,
             code_execution: None,
             previous_reports: None,
@@ -1230,6 +1328,33 @@ impl DeepResearchCreateRequest {
         self
     }
 
+    /// Set deliverables (additional file outputs to generate)
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use valyu::{DeepResearchCreateRequest, Deliverable, DeliverableType};
+    /// use serde_json::json;
+    ///
+    /// let request = DeepResearchCreateRequest::new("Market research")
+    ///     .with_deliverables(vec![
+    ///         json!("Excel file with company data"),
+    ///         json!(Deliverable {
+    ///             deliverable_type: DeliverableType::Pptx,
+    ///             description: "10-slide presentation summarizing findings".to_string(),
+    ///             columns: None,
+    ///             include_headers: None,
+    ///             sheet_name: None,
+    ///             slides: Some(10),
+    ///             template: None,
+    ///         })
+    ///     ]);
+    /// ```
+    pub fn with_deliverables(mut self, deliverables: Vec<serde_json::Value>) -> Self {
+        self.deliverables = Some(deliverables);
+        self
+    }
+
     /// Set MCP server configurations
     pub fn with_mcp_servers(mut self, servers: Vec<DeepResearchMCPServerConfig>) -> Self {
         self.mcp_servers = Some(servers);
@@ -1265,6 +1390,7 @@ impl DeepResearchCreateRequest {
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct DeepResearchCreateResponse {
     /// Whether the request was successful
+    #[serde(default = "default_true")]
     pub success: bool,
 
     /// Unique task identifier
@@ -1373,6 +1499,7 @@ pub struct DeepResearchUsage {
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct DeepResearchStatusResponse {
     /// Whether the request was successful
+    #[serde(default = "default_true")]
     pub success: bool,
 
     /// Unique task identifier
@@ -1416,6 +1543,9 @@ pub struct DeepResearchStatusResponse {
 
     /// Generated images
     pub images: Option<Vec<DeepResearchImage>>,
+
+    /// Generated deliverable files
+    pub deliverables: Option<Vec<DeliverableResult>>,
 
     /// Sources used in research
     pub sources: Option<Vec<DeepResearchSource>>,
