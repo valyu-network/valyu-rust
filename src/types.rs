@@ -2,6 +2,11 @@
 
 use serde::{Deserialize, Serialize};
 
+// Helper function for serde default
+fn default_true() -> bool {
+    true
+}
+
 /// Request parameters for the Valyu DeepSearch API
 ///
 /// # Example
@@ -1385,6 +1390,7 @@ impl DeepResearchCreateRequest {
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct DeepResearchCreateResponse {
     /// Whether the request was successful
+    #[serde(default = "default_true")]
     pub success: bool,
 
     /// Unique task identifier
