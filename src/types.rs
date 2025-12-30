@@ -1499,6 +1499,7 @@ pub struct DeepResearchUsage {
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct DeepResearchStatusResponse {
     /// Whether the request was successful
+    #[serde(default = "default_true")]
     pub success: bool,
 
     /// Unique task identifier
